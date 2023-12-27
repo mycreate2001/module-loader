@@ -1,9 +1,9 @@
 {
-  "name": "configfile",
+  "name": "module-loader",
   "version": "1.0.0",
   "description": "",
-  "main": ".dist/src/index.js",
-  "types": ".dist/src/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
     "build":"tsc -p .",
     "test":"npm run build&& node dist/test/index.test.js",
