@@ -6,7 +6,7 @@
   "types": "module-loader.d.ts",
   "scripts": {
     "test": "npm run build&& node dist/test/index.test.js",
-    "start": "npm run build && node dist/src/index.js"
+    "start": "node dist/src/index.js"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +14,6 @@
   "dependencies": {
     "advance-log": "file:../advance-log",
     "local-database-lite": "file:../local-database-lite",
-    "mini-tools": "file:../minitools"
+    "ultility-tools": "file:../ultility-tools"
   }
 }

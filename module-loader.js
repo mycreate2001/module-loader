@@ -1,8 +1,7 @@
-// import { ImportDataExt, ImportDataStd, ModulePackage, StartUpData } from "./interface.d.ts";
 const { LocalDatabaseLite } =require('local-database-lite')
-const { wildcard } =require('mini-tools')
 const { resolve } =require("path");
-const { createLog, createDebug } =require('advance-log')
+const { createLog, createDebug } =require('advance-log');
+const { wildcard, getList, findMax } = require('ultility-tools');
 
 /// default /////
 const _DB_FILE="startup"
@@ -11,8 +10,8 @@ const _DB_MODULE_TBL="modules"
 const _DB_STARTUP_TBL="startups"
 
 /** function */
-const log=createLog("module","center")
-
+const log=createLog("module","center");
+const debug=createDebug("module",1)
 /** module path */
 const _MODULE_PATH_DEFAULT="modules"
 class ModuleLoader{
@@ -54,11 +53,13 @@ class ModuleLoader{
         })
     }
 
+
+    /** startup module loader */
     startup(...modulePaths) {
         this._modulePaths=modulePaths.length?modulePaths:[_MODULE_PATH_DEFAULT];
         return this._init()
             .then(() => {
-                const startupModules = []
+                const startupModules = [];
                 this._startUps.forEach(startInf => {
                     const module = this._modules.find(x => x.id == startInf.id);
                     if (!module) return log("cannot find module '%s'", startInf.id);
@@ -72,7 +73,6 @@ class ModuleLoader{
                     if (!module) break
                     try {
                         this.load(module, list);
-                        log("load '%s' success ", module.id);
                     }
                     catch (err) {
                         if (err instanceof Error) {
@@ -96,13 +96,21 @@ class ModuleLoader{
     load(module,list){
         if(list.includes(module.id)) return module; // already load => return 
         list.push(module.id);
+
+        /** handle imports */
         const ips=[];       // input
         const that=this;
         Object.keys(module.imports||{}).forEach(key=>{
             const _tmp=module.imports[key];
             const ipInfor=correctImport(_tmp);
-            const subModules=this._modules.filter(m=>(m.level<module.level) && wildcard(m.keys,ipInfor.ref));
+            let subModules=this._modules.filter(m=>(m.level<module.level) && wildcard(m.keys,ipInfor.ref));
             if(!subModules.length) throw new Error(`#001: cannot find module '${key}', ref:'${ipInfor.ref}`);
+            //find max level
+            subModules=getList(subModules,"keys").map(keys=>{
+                const mds=subModules.filter(m=>m.keys===keys);
+                const max= findMax(mds,"level");
+                return max;
+            })
             // sort
             if(ipInfor.type==='mutil') {
                 const _result=subModules.map(m=>that.load(m,list).service)
@@ -111,7 +119,7 @@ class ModuleLoader{
             }
 
             if(ipInfor.type==='single'){
-                const _md=getMax(subModules,"level");
+                const _md=findMax(subModules,"level");
                 const _result=that.load(_md,list).service;
                 ips.push(_result);
                 return;
@@ -119,7 +127,8 @@ class ModuleLoader{
 
         })
         //result
-        getService(module,{mPaths:this._modulePaths,ips})
+        getService(module,{mPaths:this._modulePaths,ips});
+        log("loaded %s (%s)",module.id,module.name)
         return module;
     }
 
@@ -138,18 +147,6 @@ class ModuleLoader{
 
 function correctImport(importInf){
     return typeof importInf==='string'?{ref:importInf,type:'single'}:importInf
-}
-function getMax(arrs,key){
-    let mArr=arrs[0];
-    let max=(mArr)[key]
-    arrs.forEach(arr=>{
-        const val=(arr)[key];
-        if(val>max) {
-            mArr=arr;
-            max=val;
-        }
-    })
-    return mArr;
 }
 
 /**
